@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Summary</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h2, h3 {
+            color: #333;
+        }
+        select, button {
+            padding: 8px;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .summary-section {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .buyer-list {
+            white-space: pre-line;
+        }
+        .error-message {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Token Upload Section -->
+    <div id="tokenUploadSection">
+        <h3>Upload GitHub Token</h3>
+        <input type="file" id="tokenUpload" accept=".json">
+        <div id="tokenError" class="error-message"></div>
+    </div>
+
+    <!-- Main Content (Hidden Initially) -->
+    <div id="mainContent" style="display: none;">
+        <h2>Buyer Summary</h2>
+
+        <label for="monthSelect">Select Month and Year:</label>
+        <select id="monthSelect">
+            <option value="">-- Select Month and Year --</option>
+        </select>
+        
+        <label for="buyerSelect">Select Buyer:</label>
+        <select id="buyerSelect">
+            <option value="">-- All Buyers --</option>
+        </select>
+
+        <button id="fetchDataButton">Fetch Buyer Summary</button>
+        <button id="downloadAllButton">Download All as PNG</button>
+
+        <h3>Buyer Summary Table:</h3>
+        <table id="buyerTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Buyer Name</th>
+                    <th>Amount (₹)</th>
+                    <th>Challan Number</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <div id="searchedBuyerSection" class="summary-section" style="display: none;">
+            <h3>Searched Buyer:</h3>
+            <div id="searchedBuyerDetails" class="buyer-list"></div>
+        </div>
+
+        <div class="summary-section">
+            <h3>Buyer with Most Amount:</h3>
+            <div id="topBuyer"></div>
+        </div>
+
+        <div class="summary-section">
+            <h3>All Buyers:</h3>
+            <div id="allBuyersDetails" class="buyer-list"></div>
+        </div>
+
+        <div class="summary-section">
+            <h3>Overall Summary:</h3>
+            <div id="overallSummary"></div>
+        </div>
+    </div>
+
+    <script>
+        const GITHUB_USERNAME = "viralbalaji";
+        const REPO_NAME = "SALES-ALL.DATA";
+        let GITHUB_TOKEN = ""; // Will be set after uploading the JSON file
+        const API_URL = `https://api.github.com/repos/${GITHUB_USERNAME}/${REPO_NAME}/contents/`;
+
+        // Token Upload Handler
+        document.getElementById("tokenUpload").addEventListener("change", handleTokenUpload);
+
+        function handleTokenUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const tokenData = JSON.parse(e.target.result);
+
+                    // Validate the JSON structure
+                    if (!tokenData.githubToken) {
+                        throw new Error('Invalid JSON structure. Missing "githubToken" key.');
+                    }
+
+                    // Set the GitHub token
+                    GITHUB_TOKEN = tokenData.githubToken;
+
+                    // Hide the upload section and show the main content
+                    document.getElementById("tokenUploadSection").style.display = "none";
+                    document.getElementById("mainContent").style.display = "block";
+
+                    // Fetch buyer files after token is set
+                    fetchBuyerFiles();
+
+                } catch (error) {
+                    // Show error message for invalid JSON files
+                    document.getElementById("tokenError").textContent = "Invalid JSON file. Please upload a valid JSON file.";
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Fetch Buyer Files
+        async function fetchBuyerFiles() {
+            try {
+                const response = await fetch(API_URL, {
+                    headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+                });
+                if (!response.ok) throw new Error("Failed to fetch file list");
+
+                const files = await response.json();
+                const jsonFiles = files.filter(file => file.name.endsWith(".json"));
+
+                let monthYearSet = new Set();
+                let buyers = new Set();
+
+                for (const file of jsonFiles) {
+                    const dataResponse = await fetch(file.download_url);
+                    const jsonData = await dataResponse.json();
+                    const dateParts = jsonData.date.split("/");
+                    if (dateParts.length === 3) {
+                        const month = dateParts[1];
+                        const year = dateParts[2];
+                        monthYearSet.add(`${month}_${year}`);
+                    }
+                    buyers.add(jsonData.buyerName);
+                }
+
+                populateDropdown("monthSelect", [...monthYearSet].sort());
+                populateDropdown("buyerSelect", [...buyers].sort(), "-- All Buyers --");
+
+            } catch (error) {
+                console.error("Error fetching buyer files:", error);
+            }
+        }
+
+        // Populate Dropdown
+        function populateDropdown(id, options, defaultText = "-- Select --") {
+            const dropdown = document.getElementById(id);
+            dropdown.innerHTML = `<option value="">${defaultText}</option>`;
+            options.forEach(option => {
+                dropdown.innerHTML += `<option value="${option}">${option}</option>`;
+            });
+        }
+
+        // Fetch Monthly Summary
+        document.getElementById("fetchDataButton").addEventListener("click", fetchMonthlySummary);
+
+        async function fetchMonthlySummary() {
+            const selectedMonthYear = document.getElementById("monthSelect").value;
+            const selectedBuyer = document.getElementById("buyerSelect").value;
+
+            if (!selectedMonthYear) return alert("Please select a month and year");
+
+            const [selectedMonth, selectedYear] = selectedMonthYear.split("_");
+
+            try {
+                const response = await fetch(API_URL, {
+                    headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+                });
+                const files = await response.json();
+                const jsonFiles = files.filter(file => file.name.endsWith(".json"));
+
+                let summary = [];
+
+                for (const file of jsonFiles) {
+                    const data = await fetch(file.download_url);
+                    const jsonData = await data.json();
+                    const dateParts = jsonData.date.split("/");
+                    if (dateParts.length === 3 && dateParts[1] === selectedMonth && dateParts[2] === selectedYear) {
+                        if (!selectedBuyer || jsonData.buyerName === selectedBuyer) {
+                            summary.push({
+                                date: jsonData.date,
+                                buyerName: jsonData.buyerName,
+                                billAmount: parseFloat(jsonData.total.replace(/,/g, "")),
+                                billNumber: parseInt(jsonData.challanNumber)
+                            });
+                        }
+                    }
+                }
+
+                displaySummary(summary, selectedBuyer, selectedYear);
+            } catch (error) {
+                console.error("Error fetching monthly summary:", error);
+            }
+        }
+
+        // Display Summary
+        function displaySummary(data, selectedBuyer, selectedYear) {
+            const tableBody = document.querySelector("#buyerTable tbody");
+            tableBody.innerHTML = "";
+
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4">No data found.</td></tr>`;
+                return;
+            }
+
+            data.sort((a, b) => a.billNumber - b.billNumber); 
+
+            data.forEach(bill => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td>${bill.date}</td>
+                        <td>${bill.buyerName}</td>
+                        <td>₹${bill.billAmount.toFixed(2)}</td>
+                        <td>${bill.billNumber}</td>
+                    </tr>`;
+            });
+
+            updateSummaryForFilteredData(data, selectedBuyer, selectedYear);
+        }
+
+        // Update Summary for Filtered Data
+        function updateSummaryForFilteredData(filteredBills, selectedBuyer, selectedYear) {
+            const searchedBuyerSection = document.getElementById("searchedBuyerSection");
+            const searchedBuyerDetails = document.getElementById("searchedBuyerDetails");
+            const topBuyerSection = document.getElementById("topBuyer");
+            const allBuyersDetails = document.getElementById("allBuyersDetails");
+            const overallSummarySection = document.getElementById("overallSummary");
+
+            let buyerSummary = {};
+            let totalAmount = 0;
+            let totalChallans = filteredBills.length;
+
+            // Hide searched buyer section by default
+            searchedBuyerSection.style.display = "none";
+
+            // If a specific buyer is selected, display their details
+            if (selectedBuyer) {
+                const searchedBuyerBills = filteredBills.filter(bill => bill.buyerName === selectedBuyer);
+                if (searchedBuyerBills.length > 0) {
+                    searchedBuyerSection.style.display = "block";
+                    searchedBuyerDetails.innerHTML = searchedBuyerBills.map(bill => 
+                        `<p>${bill.buyerName} - Bill Number: ${bill.billNumber}, Amount: ₹${bill.billAmount.toFixed(2)}</p>`
+                    ).join("");
+                }
+            }
+
+            // Calculate buyer summary
+            filteredBills.forEach(bill => {
+                totalAmount += bill.billAmount;
+                if (!buyerSummary[bill.buyerName]) {
+                    buyerSummary[bill.buyerName] = { count: 0, totalAmount: 0 };
+                }
+                buyerSummary[bill.buyerName].count++;
+                buyerSummary[bill.buyerName].totalAmount += bill.billAmount;
+            });
+
+            let sortedBuyers = Object.entries(buyerSummary).sort((a, b) => b[1].totalAmount - a[1].totalAmount);
+
+            // Top Buyer
+            const [topBuyer, topBuyerData] = sortedBuyers[0];
+            topBuyerSection.innerHTML = `
+                <p><strong>Buyer with Most Amount:</strong> ${topBuyer}</p>
+                <p><strong>Total Challans by '${topBuyer}':</strong> ${topBuyerData.count}</p>
+                <p><strong>Average Bill Amount for '${topBuyer}':</strong> ₹${(topBuyerData.totalAmount / topBuyerData.count).toFixed(2)}</p>
+                <p><strong>Total Amount for '${topBuyer}':</strong> ₹${topBuyerData.totalAmount.toFixed(2)}</p>
+            `;
+
+            // All Buyers
+            allBuyersDetails.innerHTML = sortedBuyers.map(([buyer, data]) => 
+                `<p><strong>${buyer}</strong> - Challans: ${data.count}, Total Amount: ₹${data.totalAmount.toFixed(2)}</p>`
+            ).join("");
+
+            // Overall Summary
+            overallSummarySection.innerHTML = `
+                <p><strong>Total Buyers:</strong> ${sortedBuyers.length}</p>
+                <p><strong>Total Challans by All Buyers:</strong> ${totalChallans}</p>
+                <p><strong>Average Amount per Challan:</strong> ₹${(totalAmount / totalChallans).toFixed(2)}</p>
+                <p><strong>Total Amount of All Challans:</strong> ₹${totalAmount.toFixed(2)}</p>
+            `;
+        }
+
+        // Download Section as Image
+        function downloadSectionAsImage(sectionId, fileName) {
+            const section = document.getElementById(sectionId);
+            if (!section) {
+                console.error(`Element with id ${sectionId} not found`);
+                return;
+            }
+
+            html2canvas(section).then(canvas => {
+                const link = document.createElement('a');
+                link.download = fileName + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // Download All
+        function downloadAll() {
+            const selectedMonthYear = document.getElementById("monthSelect").value;
+            const selectedBuyer = document.getElementById("buyerSelect").value;
+
+            if (!selectedMonthYear) {
+                alert("Please select a month and year");
+                return;
+            }
+
+            const [selectedMonth, selectedYear] = selectedMonthYear.split("_");
+
+            // Download Buyer Summary Table
+            downloadSectionAsImage('buyerTable', `Buyer Summary Table_${selectedMonth}_${selectedYear}`);
+
+            // Download "Buyer with Most Amount" section
+            downloadSectionAsImage('topBuyer', `Buyer with Most Amount_${selectedMonth}_${selectedYear}`);
+
+            // Download "All Buyers" section
+            downloadSectionAsImage('allBuyersDetails', `All Buyers_${selectedMonth}_${selectedYear}`);
+
+            // Download "Overall Summary" section
+            downloadSectionAsImage('overallSummary', `Overall Summary_${selectedMonth}_${selectedYear}`);
+
+            // Download "Searched Buyer" section if a specific buyer is selected
+            if (selectedBuyer) {
+                downloadSectionAsImage('searchedBuyerDetails', `Searched Buyer_${selectedBuyer}_${selectedMonth}_${selectedYear}`);
+            }
+        }
+
+        // Add event listener for the download button
+        document.getElementById("downloadAllButton").addEventListener("click", downloadAll);
+
+     </script>
+
+                 </body>
+
+                             </html>
