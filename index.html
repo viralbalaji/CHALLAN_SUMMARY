@@ -6,8 +6,10 @@
     <title>Product Sales Analysis</title>
     <style>
 
+        @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: Arial, sans-serif, 'Times New Roman' , Times;
             margin: 20px;
         }
         h2, h3 {
@@ -80,9 +82,10 @@
             padding: 10px;
             text-align: center;
         }
-             .bill-preview-container {
+              .bill-preview-container {
             display: none;
             margin-top: 30px;
+            width: 536px;
             position: relative;
         }
         .close-preview {
@@ -670,7 +673,7 @@ function containsText(selector, text) {
             <table border="1" cellspacing="0" cellpadding="5" style="border-collapse: collapse; width: 100%; text-align: center; font-family: 'Arial'; font-size: 14px;">
 
                 <tr style="height: 40px; font-weight: bold; font-size: 14px;">
-                    <td colspan="2" style="text-align: center; background-color: #f0f0f0; font-family: TimesNewRoman; font-size: 20px;">Buyer: ${data.buyerName}</td>
+                    <td colspan="2" style="text-align: center; background-color: #f0f0f0; font-family: 'Times New Roman', Times, serif; font-size: 20px;">Buyer: ${data.buyerName}</td>
                     <td colspan="1" style="background-color: #f0f0f0;">Date: ${data.date}</td>
                     <td colspan="2" style="background-color: #f0f0f0;">Vehicle: ${vehicle}</td>
                     <td colspan="1" style="background-color: #f0f0f0; font-size: 17px;">Challan: ${data.challanNumber}</td>
@@ -685,25 +688,25 @@ function containsText(selector, text) {
                     <td style="background-color: #6b2626; font-size: 14px;">AMOUNT</td>
                 </tr>
 
-                ${productsHtml}
+                 ${productsHtml}
 
                 <tr style="height: 40px;">
                     <td colspan="5" style="text-align: right; font-weight: bold; background-color: #f2f2f2;">SUB TOTAL :</td>
                     <td style="font-weight: bold;">${subtotalValue}</td>
                 </tr>
                 <tr style="height: 35px;">
-                    <td style="font-weight: bold; font-family: TimesNewRoman;">Total BAGS:</td>
+                    <td style="font-weight: bold; font-family: 'Times New Roman', Times, serif;">Total BAGS:</td>
                     <td><b>${totalBags}</b></td>
                     <td colspan="2"></td>
                     <td style="font-weight: bold;">Discount ${discountPercent}%</td>
                     <td style="font-weight: bold;">${discountValue}</td>
                 </tr>
                 <tr style="height: 35px;">
-                    <td style="font-weight: bold; font-family: TimesNewRoman;">Total PIECES:</td>
+                    <td style="font-weight: bold; font-family: 'Times New Roman', Times, serif;">Total PIECES:</td>
                     <td><b>${totalQuantity}</b></td>
                     <td colspan="2"></td>
-                    <td style="font-weight: bold; font-family: TimesNewRoman;">TOTAL</td>
-                    <td style="font-weight: bold; font-family: TimesNewRoman; font-size: 17px; background-color: #ffe599;">${total}</td>
+                    <td style="font-weight: bold; font-family: 'Times New Roman', Times, serif;">TOTAL</td>
+                    <td style="font-weight: bold; font-family: 'Times New Roman', Times, serif; font-size: 17px; background-color: #ffe599;">${total}</td>
                 </tr>
             </table>
         </div>
@@ -800,14 +803,12 @@ function containsText(selector, text) {
         `;
         topBuyerSection.parentElement.style.display = "block";
     }
-
     // All Buyers Summary
     allBuyersDetails.innerHTML = sortedBuyers.map(([buyer, data]) =>
         `<p><strong>${buyer}</strong> - Challans: ${data.count}, Total Amount: <strong>₹</strong>${data.totalAmount.toFixed(2)}</p>`
     ).join("");
 
     allBuyersDetails.parentElement.style.display = "block";
-
     // Overall Summary
     overallSummarySection.innerHTML = `
         <p><strong>Total Buyers:</strong> ${sortedBuyers.length}</p>
@@ -818,8 +819,7 @@ function containsText(selector, text) {
     overallSummarySection.parentElement.style.display = "block";
 }
 
-// 14-06-2025(4)
-
+// 22-06-25
 </script>
 
          </body>
