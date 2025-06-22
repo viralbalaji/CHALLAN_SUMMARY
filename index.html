@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -124,8 +125,8 @@
 
 <!-- Add this upload section at the top of your HTML -->
 <div id="uploadSection" style="text-align: center; margin: 20px; padding: 20px; border: 1px dashed #ccc;">
-    <h3>Upload Your GitHub Token JSON File</h3>
-    <input type="file" id="tokenUpload" accept=".json">
+    <h3>Upload Identity Verification File</h3>
+    <input type="file" id="tokenUpload">
     <div id="uploadErrorMessage" class="error-message"></div>
 </div>
 
@@ -234,7 +235,7 @@ function handleTokenUpload(event) {
     reader.onload = async function(e) {
         try {
             const tokenData = JSON.parse(e.target.result);
-            if (!tokenData.githubToken) throw new Error('Missing githubToken in JSON');
+            if (!tokenData.githubToken) throw new Error('Missing Correct Identity Verification File!');
             
             GITHUB_CONFIG.TOKEN = tokenData.githubToken;
             document.getElementById("uploadSection").style.display = "none";
@@ -245,8 +246,8 @@ function handleTokenUpload(event) {
             
         } catch (error) {
             document.getElementById("uploadErrorMessage").textContent = 
-                `Invalid token file: ${error.message}`;
-            console.error("Token upload failed:", error);
+                `ENTRY DENIED !! :  ${error.message}`;
+            console.error("Identity Verification failed!:", error);
         }
     };
     reader.readAsText(file);
@@ -270,7 +271,7 @@ window.onload = function() {
         // Modified loadAvailableMonths (now uses GITHUB_CONFIG)
 async function loadAvailableMonths() {
     if (!GITHUB_CONFIG.TOKEN) {
-        document.getElementById('errorMessage').textContent = "No GitHub token loaded";
+        document.getElementById('errorMessage').textContent = "No, Identity Verification File loaded!";
         return;
     }
     
@@ -766,7 +767,7 @@ function containsText(selector, text) {
 
         overallSummarySection.innerHTML = `
             <p><strong>Total Challans by '${selectedBuyer}':</strong> ${totalChallans}</p>
-            <p><strong>Average Bill Amount:</strong> <strong>₹</strong>${(totalAmount / totalChallans).toFixed(2)}</p>
+            <p><strong>Average Challan Amount:</strong> <strong>₹</strong>${(totalAmount / totalChallans).toFixed(2)}</p>
             <p><strong>Total Amount:</strong> <strong>₹</strong>${totalAmount.toFixed(2)}</p>
         `;
         overallSummarySection.parentElement.style.display = "block";
@@ -798,7 +799,7 @@ function containsText(selector, text) {
         topBuyerSection.innerHTML = `
             <p><strong>Buyer with Most Amount:</strong> ${topBuyer}</p>
             <p><strong>Total Challans:</strong> ${topBuyerData.count}</p>
-            <p><strong>Average Bill Amount:</strong> <strong>₹</strong>${(topBuyerData.totalAmount / topBuyerData.count).toFixed(2)}</p>
+            <p><strong>Average Challan Amount:</strong> <strong>₹</strong>${(topBuyerData.totalAmount / topBuyerData.count).toFixed(2)}</p>
             <p><strong>Total Amount:</strong> <strong>₹</strong>${topBuyerData.totalAmount.toFixed(2)}</p>
         `;
         topBuyerSection.parentElement.style.display = "block";
@@ -818,8 +819,7 @@ function containsText(selector, text) {
     `;
     overallSummarySection.parentElement.style.display = "block";
 }
-
-// 22-06-25
+// 22-06-25(.)
 </script>
 
          </body>
